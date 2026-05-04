@@ -1,0 +1,51 @@
+# KI-OS Edge-Proxy — zentraler Caddy für ALLE Apps am VPS.
+#
+# Nutzt ein EXTERNES Docker-Netzwerk `proxy` damit andere App-Stacks
+# (ki-os, bauos, rag, ...) ihre Container daran anhängen können.
+#
+# Vor dem ersten Start einmalig:
+#   docker network create proxy
+#
+# Dann:
+#   cd /opt/proxy && docker compose up -d
+#
+# Apps fügen in ihrer eigenen docker-compose.yml einfach hinzu:
+#   networks:
+#     - proxy
+#     - default
+#   networks:
+#     proxy:
+#       external: true
+
+name: proxy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: edge-caddy
+    restart: unless-stopped
+    # Caddy lauscht intern auf 5080/5443 (Projekt-Konvention 5xxx).
+    # Docker mapped 80→5080 + 443→5443 für Außenwelt.
+    ports:
+      - "80:5080"
+      - "443:5443"
+      - "443:5443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # TLS-Zertifikate (PERSISTENT)
+      - caddy-config:/config
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  caddy-data:
+  caddy-config:

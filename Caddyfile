@@ -1,0 +1,75 @@
+# Edge-Proxy Caddyfile — zentral für ALLE Apps am VPS.
+#
+# Pattern: ein Block pro Domain → reverse_proxy auf den jeweiligen Container.
+# Container müssen im Netzwerk `proxy` sein damit sie hier per Hostname
+# (= container_name) erreichbar sind.
+
+# === Globals ===
+{
+	email julius@sima.or.at
+	# Caddy lauscht intern auf 5xxx (Projekt-Konvention).
+	# Docker mapped 80/443 von außen darauf.
+	http_port 5080
+	https_port 5443
+}
+
+# === Snippets (DRY) ===
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "interest-cohort=(), geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		-Server
+		-X-Powered-By
+	}
+}
+
+(access_log) {
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+}
+
+# ============================================================
+# DOMAINS
+# ============================================================
+
+# === KI-OS MCP-Server (Production Premium-Domain) ===
+mcp.ki.wiki {
+	import security_headers
+	reverse_proxy ki-os-mcp:5002 {
+		flush_interval -1
+		header_up X-Real-IP {remote_host}
+	}
+	import access_log
+}
+
+# === KI-OS MCP-Server (Fallback via sslip-IP-DNS) ===
+76-13-10-79.sslip.io {
+	import security_headers
+	reverse_proxy ki-os-mcp:5002 {
+		flush_interval -1
+		header_up X-Real-IP {remote_host}
+	}
+	import access_log
+}
+
+# === BauOS-App ===
+# Aktivieren sobald bauos-app im proxy-Netzwerk ist + DNS auf VPS zeigt.
+# bauos.sima.business {
+#     import security_headers
+#     reverse_proxy bauos-app:3000
+#     import access_log
+# }
+
+# === Templates für weitere Apps ===
+# <subdomain>.<domain> {
+#     import security_headers
+#     reverse_proxy <container-name>:<port>
+#     import access_log
+# }
