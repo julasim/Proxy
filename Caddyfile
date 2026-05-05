@@ -14,7 +14,9 @@
 }
 
 # === Snippets (DRY) ===
-(security_headers) {
+
+# Strikt — für JSON-APIs (MCP). Blockt alles was kein eigener Server-Response ist.
+(api_security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Frame-Options "DENY"
@@ -22,6 +24,22 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "interest-cohort=(), geolocation=(), microphone=(), camera=()"
 		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		-Server
+		-X-Powered-By
+	}
+}
+
+# Locker — für HTML-Web-Apps (Dashboard, BauOS). Erlaubt eigenes JS/CSS/Fonts.
+(html_security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "interest-cohort=(), geolocation=(), microphone=(), camera=()"
+		# CSP für Web-Apps: eigenes self + inline (Next.js braucht das),
+		# Google Fonts erlaubt, keine externen scripts.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'"
 		-Server
 		-X-Powered-By
 	}
@@ -39,9 +57,9 @@
 # DOMAINS
 # ============================================================
 
-# === KI-OS MCP-Server (Production Premium-Domain) ===
-mcp.ki.wiki {
-	import security_headers
+# === KI-OS MCP-Server (Premium-Domain) ===
+wiki-mcp.sima.business {
+	import api_security_headers
 	reverse_proxy ki-os-mcp:5002 {
 		flush_interval -1
 		header_up X-Real-IP {remote_host}
@@ -49,27 +67,39 @@ mcp.ki.wiki {
 	import access_log
 }
 
-# === KI-OS MCP-Server (Fallback via sslip-IP-DNS) ===
+# === KI-OS MCP-Server (Fallback via sslip) ===
 76-13-10-79.sslip.io {
-	import security_headers
+	import api_security_headers
 	reverse_proxy ki-os-mcp:5002 {
 		flush_interval -1
+		header_up X-Real-IP {remote_host}
+	}
+	import access_log
+}
+
+# === KI-OS Dashboard (mit Auth.js Login) ===
+dashboard.sima.business {
+	import html_security_headers
+	reverse_proxy ki-os-dashboard:5000 {
 		header_up X-Real-IP {remote_host}
 	}
 	import access_log
 }
 
 # === BauOS-App ===
-# Aktivieren sobald bauos-app im proxy-Netzwerk ist + DNS auf VPS zeigt.
-# bauos.sima.business {
-#     import security_headers
-#     reverse_proxy bauos-app:3000
-#     import access_log
-# }
+bauos.sima.business {
+	import html_security_headers
+	reverse_proxy bauos-app:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+	import access_log
+}
 
 # === Templates für weitere Apps ===
 # <subdomain>.<domain> {
-#     import security_headers
+#     import api_security_headers     # für JSON-APIs
+#     # ODER
+#     import html_security_headers    # für Web-UIs
 #     reverse_proxy <container-name>:<port>
 #     import access_log
 # }
