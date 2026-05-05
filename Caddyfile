@@ -78,7 +78,7 @@ wiki-mcp.sima.business {
 }
 
 # === KI-OS Dashboard (mit Auth.js Login) ===
-dashboard.sima.business {
+wiki-dashboard.sima.business {
 	import html_security_headers
 	reverse_proxy ki-os-dashboard:5000 {
 		header_up X-Real-IP {remote_host}
