@@ -60,6 +60,9 @@
 # === KI-OS MCP-Server (Premium-Domain) ===
 wiki-mcp.sima.business {
 	import api_security_headers
+	# OAuth-Login-Seite braucht lockerere CSP fuer inline-styles
+	@oauth_html path /oauth/authorize
+	header @oauth_html Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
 	reverse_proxy ki-os-mcp:5002 {
 		flush_interval -1
 		header_up X-Real-IP {remote_host}
@@ -70,6 +73,8 @@ wiki-mcp.sima.business {
 # === KI-OS MCP-Server (Fallback via sslip) ===
 76-13-10-79.sslip.io {
 	import api_security_headers
+	@oauth_html path /oauth/authorize
+	header @oauth_html Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
 	reverse_proxy ki-os-mcp:5002 {
 		flush_interval -1
 		header_up X-Real-IP {remote_host}
